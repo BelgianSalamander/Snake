@@ -1,0 +1,7 @@
+SnakeServer/.vs/
+SnakeServer/SnakeServer/Debug/
+SnakeServer/SnakeServer/Release/
+*.exe
+*.ilk
+*.pdb
+*.lib
