@@ -7,10 +7,9 @@
 #include <time.h>
 #include <random>
 #include <algorithm>
+#include <unordered_map>
 
-#include <WS2tcpip.h>
-
-#pragma comment (lib, "ws2_32.lib")
+void initGrids();
 
 const int MAX_GAMES = 1;
 
@@ -24,6 +23,8 @@ static int gamesInProgress;
 
 std::vector<Player> players;
 std::vector<SnakeGrid> games;
+
+std::unordered_map<std::string, int> namesUsed;
 
 static void checkForIncomingConnections() {
 	fd_set copy = listener;
@@ -47,8 +48,6 @@ static void checkForIncomingConnections() {
 			char buff[4096];
 			strerror_s(buff, 3);
 			std::cout << buff << std::endl;
-			std::cout << "Only sent " << bytesIn << " bytes" << std::endl;
-			std::cout << color[0] << " " << color[1] << " " << color[2] << std::endl;
 			closesocket(client);
 			return;
 		}
@@ -68,10 +67,15 @@ static void checkForIncomingConnections() {
 
 		bytesIn = recv(client, name, 64, 0);
 
-		player.nameLength = bytesIn;
-		player.name = name;
+		namesUsed[name] += 1;
+		if (namesUsed[name] == 1) {
+			player.name = name;
+		}
+		else {
+			player.name = std::string(name) + " " + std::to_string(namesUsed[name]);
+		}
 
-		std::cout << name << " joined!" << std::endl;
+		std::cout << player.name << " joined!" << std::endl;
 
 		send(client, (char*) &player.colourId, 4, 0);
 
@@ -104,8 +108,8 @@ static void checkForGameStart() {
 int main() {
 	std::srand(time(NULL));
 
-	colours.push_back(new float[] {0.1f, 0.1f, 0.1f, 1.0f});
-	colours.push_back(new float[] {1.0f, 1.0f, 0.0f, 1.0f});
+	colours.push_back(new float[] {0.1f, 0.1f, 0.1f, 1.0f}); //Grid Background Color
+	colours.push_back(new float[] {1.0f, 1.0f, 0.0f, 1.0f}); //Food Color
 
 	GLFWwindow* window;
 
@@ -130,6 +134,8 @@ int main() {
 	//Setup Socket
 	timeout.tv_sec = 0;
 	timeout.tv_usec = 10;
+
+	initGrids();
 
 	WSADATA wsData;
 	WORD ver = MAKEWORD(2, 2);
@@ -161,7 +167,8 @@ int main() {
 	while (!glfwWindowShouldClose(window)) {
 		glClear(GL_COLOR_BUFFER_BIT);
 
-		for (SnakeGrid grid : games) {
+		for (SnakeGrid& grid : games) {
+			grid.checkForInboundMoves();
 			grid.draw();
 		}
 

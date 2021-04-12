@@ -2,9 +2,19 @@
 #include <snake.h>
 #include <tuple>
 #include <random>
-#include <WS2tcpip.h>
 
-#pragma comment (lib, "ws2_32.lib")
+timeval snakeTimeout;
+std::string dirs[] = {
+	"UP",
+	"RIGHT",
+	"DOWN",
+	"LEFT"
+};
+
+void initGrids() {
+	snakeTimeout.tv_sec = 0;
+	snakeTimeout.tv_usec = 10;
+}
 
 std::tuple<int, int> directions[4] = {
 	std::make_tuple(0,1),   //UP
@@ -96,6 +106,8 @@ void SnakeGrid::moveSnake(int snakeIndex, int direction) {
 		return;
 	}
 
+	std::cout << snake.player.name << " moved " << dirs[direction] << std::endl;
+
 	int newX = snake.headX + std::get<0>(directionTuple);
 	int newY = snake.headY + std::get<1>(directionTuple);
 
@@ -126,6 +138,7 @@ void SnakeGrid::moveSnake(int snakeIndex, int direction) {
 
 void SnakeGrid::deleteSnake(int index) {
 	Snake& snake = snakes[index];
+	std::cout << snake.player.name << " has been deleted" << std::endl;
 
 	while (!snake.snake.empty()) {
 		Point point = snake.snake.front();
@@ -168,14 +181,20 @@ void SnakeGrid::broadcastChanges() {
 	}
 
 	for (Snake snake : snakes) {
-		send(snake.player.socket, updateInstructions, 5 + 12 * amountOfUpdates, 0);
+		if (snake.inGame) {
+			send(snake.player.socket, updateInstructions, 5 + 12 * amountOfUpdates, 0);
+		}
 	}
+	tilesToBroadcast.clear();
+	sendHeads();
+	printGrid();
 }
 
 void SnakeGrid::sendHeads() {
 	char headInstruction[9];
 	headInstruction[0] = 0x03;
 	for (Snake snake : snakes) {
+		if (!snake.inGame) return;
 		memcpy(headInstruction + 1, &snake.headX, 4);
 		memcpy(headInstruction + 5, &snake.headY, 4);
 		send(snake.player.socket, headInstruction, 9, 0);
@@ -183,9 +202,66 @@ void SnakeGrid::sendHeads() {
 }
 
 void SnakeGrid::queryMoves() {
+	broadcastChanges(); //Update the clients grid
 	char query[1];
 	query[0] = 0x04;
+	FD_ZERO(&snakeFD);
 	for (Snake snake : snakes) {
-		send(snake.player.socket, query, 1, 0);
+		if (snake.inGame) {
+			snake.receivedMove = false;
+
+			send(snake.player.socket, query, 1, 0);
+			FD_SET(snake.player.socket, &snakeFD);
+		}
 	}
+}
+
+void SnakeGrid::checkForInboundMoves() {
+	fd_set copy = snakeFD;
+	int count = select(0, &copy, nullptr, nullptr, &snakeTimeout);
+	for (int i = 0; i < count; i++) {
+		SOCKET sock = copy.fd_array[i];
+		FD_CLR(sock, &snakeFD);
+		char receivedMove[1];
+
+		int inBytes = recv(sock, receivedMove, 1, 0);
+		if (inBytes != 1) {
+			for (int i = 0; i < snakes.size(); i++) {
+				if (snakes[i].player.socket == sock) {
+					deleteSnake(i);
+					break;
+				}
+			}
+		}
+		else {
+			for (int i = 0; i < snakes.size(); i++) {
+				if (snakes[i].player.socket == sock) {
+					snakes[i].receivedMove = true;
+					snakes[i].nextMove = (int) receivedMove[0];
+					break;
+				}
+			}
+		}
+	}
+
+	if (!snakeFD.fd_count) {
+		moveSnakes();
+	}
+}
+
+void SnakeGrid::moveSnakes() {
+	for (int i = 0; i < snakes.size(); i++) {
+		moveSnake(i, snakes[i].nextMove);
+	}
+	queryMoves();
+}
+
+void SnakeGrid::printGrid() {
+	for (int x = 0; x < size; x++) {
+		for (int y = 0; y < size; y++) {
+			std::cout << (unsigned int)grid[x][y] << " ";
+		}
+		std::cout << "\n";
+	}
+	std::cout.flush();
 }

@@ -1,4 +1,5 @@
 import socket
+import time
 from random import shuffle, randint, choice
 
 UP = 0
@@ -53,42 +54,42 @@ class SnakeClient:
 
         if instruction == 0x01:
             self.size = int.from_bytes(self.sock.recv(4), 'little')
-            self.grid = [[BLANK] * self.size for i in range(size)]
+            self.grid = [[BLANK] * self.size for i in range(self.size)]
             print("Game Started!")
 
         if instruction == 0x02:
             amount = int.from_bytes(self.sock.recv(4), 'little')
             print('Received', amount, 'updates!')
             full = self.sock.recv(12 * amount)
-            print(full)
             for i in range(amount):
                 x_index = int.from_bytes(full[i * 12 : i * 12 + 4], 'little')
                 y_index = int.from_bytes(full[i * 12 + 4 : i * 12 + 8], 'little')
                 value = int.from_bytes(full[i * 12 + 8 : i * 12 + 12], 'little')
                 self.grid[x_index][y_index] = value
-                print(x_index, y_index, value)
             print('\n' . join(' '.join(str(val) for val in row) for row in self.grid))
 
         if instruction == 0x03:
             head = self.sock.recv(8)
             self.x = int.from_bytes(head[:4], 'little')
             self.y = int.from_bytes(head[4:], 'little')
+            print(f"Set head to {self.x}, {self.y}")
 
         if instruction == 0x04:
             move = self.select_move()
             print(f"Moving {DIR_NAMES[move]}!")
-            self.sock.send(bytes(self.select_move()))
+            self.sock.send(self.select_move().to_bytes(1, 'little'))
 
-    def is_safe(move):
-        new_x = self.x + DIRECTIONS[MOVE][0]
-        new_y = self.y + DIRECTIONS[MOVE][0]
+    def is_safe(self, move):
+        new_x = self.x + DIRECTIONS[move][0]
+        new_y = self.y + DIRECTIONS[move][1]
 
         if(not(0 <= new_x < self.size and 0 <= new_y < self.size)):
             return False
         return not self.grid[new_x][new_y]
     
     def select_move(self):
-        available = [move for move in range(3) if is_safe(move)]
+        time.sleep(1)
+        available = [move for move in range(3) if self.is_safe(move)]
         if(len(available) == 0):
             return randint(0,3)
         else:

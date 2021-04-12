@@ -3,6 +3,9 @@
 #include <queue>
 #include <string>
 #include <set>
+#include <WS2tcpip.h>
+
+#pragma comment (lib, "ws2_32.lib")
 
 #define UP 0
 #define RIGHT 1
@@ -29,8 +32,8 @@ struct Player {
 	unsigned int socket, colourId;
 	int score = 1000;
 	std::string name;
-	int nameLength;
 	bool inGame = false;
+	bool connected = true;
 };
 
 
@@ -38,6 +41,8 @@ struct Snake {
 	int headX, headY;
 	std::queue<Point> snake;
 	bool inGame = true;
+	bool receivedMove = false;
+	int nextMove;
 	Player player;
 };
 
@@ -56,8 +61,9 @@ class SnakeGrid {
 		void queryMoves();
 		void broadcastChanges();
 		void sendHeads();
-		std::vector<Snake> snakes;
+		void moveSnakes();
 		std::set<Point> tilesToBroadcast;
+		fd_set snakeFD;
 	public:
 		SnakeGrid(int gridSize, int x, int y, int width, int height);
 		void draw();
@@ -65,5 +71,8 @@ class SnakeGrid {
 		void addFood();
 		void moveSnake(int snake, int direction);
 		void startGame();
+		void checkForInboundMoves();
+		void printGrid();
 		Snake getSnake(int n) { return snakes[n]; };
+		std::vector<Snake> snakes;
 };
