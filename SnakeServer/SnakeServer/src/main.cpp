@@ -105,6 +105,14 @@ static void checkForGameStart() {
 	}
 }
 
+static void checkForFinishedGames() {
+	for (int i = games.size() - 1; i >= 0; i--) {
+		if (games[i].ended) {
+			games.erase(games.begin() + i);
+		}
+	}
+}
+
 int main() {
 	std::srand(time(NULL));
 
@@ -177,6 +185,8 @@ int main() {
 		glfwPollEvents();
 
 		checkForIncomingConnections();
+
+		checkForFinishedGames();
 
 		checkForGameStart();
 	}

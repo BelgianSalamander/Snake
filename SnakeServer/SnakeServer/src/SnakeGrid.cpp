@@ -147,6 +147,8 @@ void SnakeGrid::deleteSnake(int index) {
 	}
 
 	snake.inGame = false;
+	char lost[1] = { 0x05 };
+	send(snake.player.socket, lost, 1, 0);
 }
 
 void SnakeGrid::startGame() {
@@ -187,7 +189,7 @@ void SnakeGrid::broadcastChanges() {
 	}
 	tilesToBroadcast.clear();
 	sendHeads();
-	printGrid();
+	//printGrid();
 }
 
 void SnakeGrid::sendHeads() {
@@ -253,7 +255,16 @@ void SnakeGrid::moveSnakes() {
 	for (int i = 0; i < snakes.size(); i++) {
 		moveSnake(i, snakes[i].nextMove);
 	}
-	queryMoves();
+	int amountOfActiveSnakes = 0;
+	for (Snake snake : snakes) {
+		amountOfActiveSnakes += snake.inGame;
+	}
+	if (amountOfActiveSnakes <= 1) {
+		ended = true;
+	}
+	else {
+		queryMoves();
+	}
 }
 
 void SnakeGrid::printGrid() {

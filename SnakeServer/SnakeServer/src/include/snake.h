@@ -73,6 +73,7 @@ class SnakeGrid {
 		void startGame();
 		void checkForInboundMoves();
 		void printGrid();
+		boolean ended = false;
 		Snake getSnake(int n) { return snakes[n]; };
 		std::vector<Snake> snakes;
 };

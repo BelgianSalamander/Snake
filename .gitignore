@@ -5,3 +5,4 @@ SnakeServer/SnakeServer/Release/
 *.ilk
 *.pdb
 *.lib
+*.cpython*

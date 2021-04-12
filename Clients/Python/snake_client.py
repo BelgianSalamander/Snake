@@ -14,19 +14,14 @@ FOOD = 1
 
 PORT = 42069
 
-DIR_NAMES = {
-    UP : 'up',
-    LEFT : 'left',
-    DOWN : 'down',
-    RIGHT : 'right'
-}
-
 class SnakeClient:
     def __init__(self, ip = '127.0.0.1'):
         self.ip = ip
         self.port = PORT
         self.id = 0
         self.x, self.y = 0, 0
+        self.name = "Unnamed Client"
+        self.color = (255, 0, 255)
 
     def connect(self):
         self.set_ID()
@@ -43,8 +38,13 @@ class SnakeClient:
         print(self.id)
 
     def set_ID(self):
-        self.name = "Jules"
-        self.color = (255, 0, 255)
+        raise NotImplementedError
+
+    def on_game_start(self):
+        pass
+
+    def on_square_updated(self, x, y, value):
+        pass
 
     def process_instrucion(self):
         instruction = int.from_bytes(self.sock.recv(1), 'little')
@@ -55,48 +55,34 @@ class SnakeClient:
         if instruction == 0x01:
             self.size = int.from_bytes(self.sock.recv(4), 'little')
             self.grid = [[BLANK] * self.size for i in range(self.size)]
-            print("Game Started!")
+            self.on_game_start()
 
         if instruction == 0x02:
             amount = int.from_bytes(self.sock.recv(4), 'little')
-            print('Received', amount, 'updates!')
             full = self.sock.recv(12 * amount)
             for i in range(amount):
                 x_index = int.from_bytes(full[i * 12 : i * 12 + 4], 'little')
                 y_index = int.from_bytes(full[i * 12 + 4 : i * 12 + 8], 'little')
                 value = int.from_bytes(full[i * 12 + 8 : i * 12 + 12], 'little')
                 self.grid[x_index][y_index] = value
-            print('\n' . join(' '.join(str(val) for val in row) for row in self.grid))
+                self.on_square_updated(x_index, y_index, value)
 
         if instruction == 0x03:
             head = self.sock.recv(8)
             self.x = int.from_bytes(head[:4], 'little')
             self.y = int.from_bytes(head[4:], 'little')
-            print(f"Set head to {self.x}, {self.y}")
 
         if instruction == 0x04:
             move = self.select_move()
-            print(f"Moving {DIR_NAMES[move]}!")
-            self.sock.send(self.select_move().to_bytes(1, 'little'))
+            self.sock.send(move.to_bytes(1, 'little'))
 
-    def is_safe(self, move):
-        new_x = self.x + DIRECTIONS[move][0]
-        new_y = self.y + DIRECTIONS[move][1]
-
-        if(not(0 <= new_x < self.size and 0 <= new_y < self.size)):
-            return False
-        return not self.grid[new_x][new_y]
+        if instruction == 0x05:
+            print("Game finished")
     
     def select_move(self):
-        time.sleep(1)
-        available = [move for move in range(3) if self.is_safe(move)]
-        if(len(available) == 0):
-            return randint(0,3)
-        else:
-            return choice(available)
+        raise NotImplementedError
 
-if __name__ == "__main__":
-    client = SnakeClient()
-    client.connect()
-    while True:
-        client.process_instrucion()
+    def run(self):
+        self.connect()
+        while True:
+            self.process_instrucion()
