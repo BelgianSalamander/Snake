@@ -2,6 +2,14 @@
 #include <snake.h>
 #include <tuple>
 #include <random>
+#include <chrono>
+
+using namespace std::chrono;
+
+inline static time_t getTime() {
+	return duration_cast<milliseconds>(
+		system_clock::now().time_since_epoch()).count();
+}
 
 timeval snakeTimeout;
 std::string dirs[] = {
@@ -55,11 +63,13 @@ void SnakeGrid::draw() {
 	}
 }
 
-void SnakeGrid::addSnake(int x, int y, int length, int direction, Player& player) {
+void SnakeGrid::addSnake(int x, int y, int length, int direction, Player* player) {
 	Snake snake;
 	snake.headX = x;
 	snake.headY = y;
 	snake.player = player;
+
+	player->inGame = true;
 
 	std::tuple<int, int> directionTuple = directions[direction];
 	int dirX = std::get<0>(directionTuple);
@@ -72,7 +82,7 @@ void SnakeGrid::addSnake(int x, int y, int length, int direction, Player& player
 		x -= dirX;
 		y -= dirY;
 		snake.snake.push(Point{x, y});
-		setSquare(x, y, player.colourId);
+		setSquare(x, y, player->colourId);
 	}
 
 	snakes.push_back(snake);
@@ -99,6 +109,11 @@ void SnakeGrid::addFood() {
 }
 
 void SnakeGrid::moveSnake(int snakeIndex, int direction) {
+	if (!(direction < 4 && direction >= 0)) {
+		snakes[snakeIndex].player->connected = false;
+		deleteSnake(snakeIndex);
+		return;
+	}
 	std::tuple<int, int> directionTuple = directions[direction];
 	Snake& snake = snakes[snakeIndex];
 
@@ -106,7 +121,7 @@ void SnakeGrid::moveSnake(int snakeIndex, int direction) {
 		return;
 	}
 
-	std::cout << snake.player.name << " moved " << dirs[direction] << std::endl;
+	std::cout << snake.player->name << " moved " << dirs[direction] << std::endl;
 
 	int newX = snake.headX + std::get<0>(directionTuple);
 	int newY = snake.headY + std::get<1>(directionTuple);
@@ -122,7 +137,7 @@ void SnakeGrid::moveSnake(int snakeIndex, int direction) {
 	unsigned int gridVal = grid[newX][newY];
 	if (gridVal <= 1) {
 		snake.snake.push(Point{ newX, newY });
-		setSquare(newX, newY, snake.player.colourId);
+		setSquare(newX, newY, snake.player->colourId);
 		if (!gridVal) {
 			Point clearPoint = snake.snake.front();
 			snake.snake.pop();
@@ -138,7 +153,7 @@ void SnakeGrid::moveSnake(int snakeIndex, int direction) {
 
 void SnakeGrid::deleteSnake(int index) {
 	Snake& snake = snakes[index];
-	std::cout << snake.player.name << " has been deleted" << std::endl;
+	std::cout << snake.player->name << " has been deleted" << std::endl;
 
 	while (!snake.snake.empty()) {
 		Point point = snake.snake.front();
@@ -148,7 +163,7 @@ void SnakeGrid::deleteSnake(int index) {
 
 	snake.inGame = false;
 	char lost[1] = { 0x05 };
-	send(snake.player.socket, lost, 1, 0);
+	send(snake.player->socket, lost, 1, 0);
 }
 
 void SnakeGrid::startGame() {
@@ -157,10 +172,10 @@ void SnakeGrid::startGame() {
 	memcpy(startInstruction + 1, &size, 4);
 
 	for (Snake snake : snakes) {
-		send(snake.player.socket, startInstruction, 5, 0);
+		send(snake.player->socket, startInstruction, 5, 0);
 	}
 
-	for (int i = 0; i < 3; i++) {
+	for (int i = 0; i < FOOD_PER_GAME; i++) {
 		addFood();
 	}
 
@@ -184,7 +199,7 @@ void SnakeGrid::broadcastChanges() {
 
 	for (Snake snake : snakes) {
 		if (snake.inGame) {
-			send(snake.player.socket, updateInstructions, 5 + 12 * amountOfUpdates, 0);
+			send(snake.player->socket, updateInstructions, 5 + 12 * amountOfUpdates, 0);
 		}
 	}
 	tilesToBroadcast.clear();
@@ -199,11 +214,12 @@ void SnakeGrid::sendHeads() {
 		if (!snake.inGame) return;
 		memcpy(headInstruction + 1, &snake.headX, 4);
 		memcpy(headInstruction + 5, &snake.headY, 4);
-		send(snake.player.socket, headInstruction, 9, 0);
+		send(snake.player->socket, headInstruction, 9, 0);
 	}
 }
 
 void SnakeGrid::queryMoves() {
+	timeSinceLastMove = getTime();
 	broadcastChanges(); //Update the clients grid
 	char query[1];
 	query[0] = 0x04;
@@ -212,8 +228,8 @@ void SnakeGrid::queryMoves() {
 		if (snake.inGame) {
 			snake.receivedMove = false;
 
-			send(snake.player.socket, query, 1, 0);
-			FD_SET(snake.player.socket, &snakeFD);
+			send(snake.player->socket, query, 1, 0);
+			FD_SET(snake.player->socket, &snakeFD);
 		}
 	}
 }
@@ -229,7 +245,8 @@ void SnakeGrid::checkForInboundMoves() {
 		int inBytes = recv(sock, receivedMove, 1, 0);
 		if (inBytes != 1) {
 			for (int i = 0; i < snakes.size(); i++) {
-				if (snakes[i].player.socket == sock) {
+				if (snakes[i].player->socket == sock) {
+					snakes[i].player->connected = false;
 					deleteSnake(i);
 					break;
 				}
@@ -237,7 +254,7 @@ void SnakeGrid::checkForInboundMoves() {
 		}
 		else {
 			for (int i = 0; i < snakes.size(); i++) {
-				if (snakes[i].player.socket == sock) {
+				if (snakes[i].player->socket == sock) {
 					snakes[i].receivedMove = true;
 					snakes[i].nextMove = (int) receivedMove[0];
 					break;
@@ -246,7 +263,19 @@ void SnakeGrid::checkForInboundMoves() {
 		}
 	}
 
-	if (!snakeFD.fd_count) {
+	time_t now = getTime();
+
+	if ((!snakeFD.fd_count) && ((getTime() - timeSinceLastMove) > 500)) {
+		moveSnakes();
+	}
+	else if ((getTime() - timeSinceLastMove) > 1000) {
+		for (int i = 0; i < snakes.size(); i++) {
+			if (!snakes[i].receivedMove) {
+				snakes[i].player->connected = false;
+				deleteSnake(i);
+			}
+		}
+		std::cout << "Snakes timed out" << std::endl;
 		moveSnakes();
 	}
 }

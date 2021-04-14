@@ -4,6 +4,10 @@
 #include <fstream>
 #include <streambuf>
 #include <string>
+#include <ft2build.h>
+#include FT_FREETYPE_H
+
+FT_Library library;
 
 unsigned int squareBuffer;
 

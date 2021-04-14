@@ -1,4 +1,5 @@
 from snake_client import *
+from random import randint
 
 """
 Values Given:
@@ -35,12 +36,14 @@ class MyClient(SnakeClient):
         Used to set name and color"""
 
         self.name = "Dummy"
-        self.color = (0, 255, 0)
+        self.color = tuple(randint(0,255) for i in range(3))
     
     def select_move(self):
-        """This function MUST return a move (or the corresponding number between 0 and 3)
+        """This function MUST return a move (or the corresponding number between 0 and 3) in under a second (or you will be disconnected)
         Is called when server requests a move"""
 
         return RIGHT
 
+client = MyClient()
+client.run()
     

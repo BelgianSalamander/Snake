@@ -4,6 +4,7 @@
 #include <string>
 #include <set>
 #include <WS2tcpip.h>
+#include <time.h>
 
 #pragma comment (lib, "ws2_32.lib")
 
@@ -43,10 +44,12 @@ struct Snake {
 	bool inGame = true;
 	bool receivedMove = false;
 	int nextMove;
-	Player player;
+	Player* player;
 };
 
 extern std::vector<float*> colours;
+
+extern int FOOD_PER_GAME;
 
 extern void initAbstractions();
 extern void drawRectangle(float startX, float startY, float width, float height, float* color);
@@ -62,12 +65,13 @@ class SnakeGrid {
 		void broadcastChanges();
 		void sendHeads();
 		void moveSnakes();
+		time_t timeSinceLastMove;
 		std::set<Point> tilesToBroadcast;
 		fd_set snakeFD;
 	public:
 		SnakeGrid(int gridSize, int x, int y, int width, int height);
 		void draw();
-		void addSnake(int x, int y, int length, int direction, Player& player);
+		void addSnake(int x, int y, int length, int direction, Player* player);
 		void addFood();
 		void moveSnake(int snake, int direction);
 		void startGame();
@@ -76,4 +80,6 @@ class SnakeGrid {
 		boolean ended = false;
 		Snake getSnake(int n) { return snakes[n]; };
 		std::vector<Snake> snakes;
+		int getStartX() { return startX; }
+		int getStartY() { return startY; }
 };

@@ -1,0 +1,46 @@
+{
+  "basic": {
+    "max_games": 2,
+    "snakes_per_game": 2,
+    "snake_length": 3,
+    "food_per_game": 3,
+    "snake_start": [
+      [ 2, 2 ],
+      [ 7, 7 ]
+    ],
+    "snake_directions": [
+      2,
+      0
+    ],
+    "grid_size": 10,
+    "grid_width": 350,
+    "grid_height": 350,
+    "grid_pos": [
+      [ 50, 500 ],
+      [ 50, 50 ]
+    ]
+  },
+  "quad": {
+    "max_games" :  1,
+    "snakes_per_game": 4,
+    "food_per_game": 3,
+    "snake_start": [
+      [ 0, 2 ],
+      [ 2, 19 ],
+      [ 19, 17 ],
+      [ 17, 0 ]
+    ],
+    "snake_directions": [
+      2,
+      3,
+      0,
+      1
+    ],
+    "grid_size": 20,
+    "grid_width": 800,
+    "grid_height": 800,
+    "grid_pos": [
+      [ 50, 50 ]
+    ]
+  }
+}
