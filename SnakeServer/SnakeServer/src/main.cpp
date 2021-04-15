@@ -28,6 +28,8 @@ Point GRID_POS_DEFAULT[] = {
 	Point {50, 50}
 };
 
+float white[] = { 1.0, 1.0, 1.0, 1.0 };
+
 //Constants (will be taken from json)
 int MAX_GAMES = 2;
 int SNAKES_PER_GAME = 2;
@@ -35,6 +37,8 @@ int SNAKE_LENGTH = 3;
 int FOOD_PER_GAME = 3;
 Point* SNAKE_START;
 int* SNAKE_DIRECTIONS;
+
+int offset = 0;
 
 int GRID_SIZE = 10;
 int GRID_WIDTH = 350;
@@ -218,6 +222,24 @@ static void checkForFinishedGames() {
 	}
 }
 
+bool compare(Player* playerOne, Player* playerTwo) {
+	return (playerOne->score > playerTwo->score);
+}
+
+void drawLeaderboard() {
+	if (players.size() == 0) return;
+	std::sort(players.begin(), players.end(), compare);
+	bool scroll = players.size() > 20;
+	int i = -1 * scroll;
+	int start = scroll ? (offset / 50) : 0;
+	for (int index = start; index < (scroll ? start + 21 : players.size()); index++) {
+		Player* player = players[index % players.size()];
+		render_text(player->name.c_str(), 10, 950 - 50 * i - offset % 50 * scroll, colours[player->colourId]);
+		render_text(std::to_string(player->score).c_str(), 310, 950 - 50 * i - offset % 50 * scroll, white);
+		i++;
+	}
+}
+
 int main() {
 	loadConstants("quad");
 	std::srand(time(NULL));
@@ -233,7 +255,7 @@ int main() {
 		return -1;
 	};
 
-	window = glfwCreateWindow(900, 900, "Snake", NULL, NULL);
+	window = glfwCreateWindow(1920, 1000, "Snake", NULL, NULL);
 	if (!window) {
 		glfwTerminate();
 		return -1;
@@ -288,6 +310,8 @@ int main() {
 			grid.draw();
 		}
 
+		drawLeaderboard();
+
 		glfwSwapBuffers(window);
 
 		glfwPollEvents();
@@ -297,6 +321,14 @@ int main() {
 		checkForFinishedGames();
 
 		checkForGameStart();
+
+		offset++;
+
+		GLenum err;
+		while ((err = glGetError()) != GL_NO_ERROR)
+		{
+			std::cout << err;
+		}
 	}
 
 	for (Player* player : players) {

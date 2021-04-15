@@ -1,6 +1,7 @@
 SnakeServer/.vs/
 SnakeServer/SnakeServer/Debug/
 SnakeServer/SnakeServer/Release/
+MyClients/
 *.exe
 *.ilk
 *.pdb

@@ -53,6 +53,7 @@ extern int FOOD_PER_GAME;
 
 extern void initAbstractions();
 extern void drawRectangle(float startX, float startY, float width, float height, float* color);
+extern void render_text(const char* text, float startX, float startY, float* color, float scale = 1.0);
 
 class SnakeGrid {
 	private:

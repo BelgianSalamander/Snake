@@ -28,6 +28,8 @@
   <ItemGroup>
     <None Include="res\Shaders\basic_frag.shader" />
     <None Include="res\Shaders\basic_vertex.shader" />
+    <None Include="res\shaders\texture_vertex.shader" />
+    <None Include="res\shaders\texture_frag.shader" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\include\snake.h">

@@ -61,6 +61,11 @@ void SnakeGrid::draw() {
 			}
 		}
 	}
+
+	for (int i = 0; i < snakes.size(); i++) {
+		std::string name = snakes[i].player->name + (snakes[i].inGame ? "" : " (DEAD)");
+		render_text(name.c_str(), startX + displayWidth + 50, startY + displayHeight - 50 * (i + 1), colours[snakes[i].player->colourId]);
+	}
 }
 
 void SnakeGrid::addSnake(int x, int y, int length, int direction, Player* player) {
@@ -144,6 +149,7 @@ void SnakeGrid::moveSnake(int snakeIndex, int direction) {
 			setSquare(clearPoint.x, clearPoint.y, 0);
 		}else {
 			addFood();
+			snake.player->score += 1;
 		}
 	}
 	else {
@@ -162,6 +168,12 @@ void SnakeGrid::deleteSnake(int index) {
 	}
 
 	snake.inGame = false;
+	snake.player->score -= 10;
+	for (Snake otherSnake : snakes) {
+		if (otherSnake.inGame) {
+			otherSnake.player->score += 10;
+		}
+	}
 	char lost[1] = { 0x05 };
 	send(snake.player->socket, lost, 1, 0);
 }
@@ -265,7 +277,7 @@ void SnakeGrid::checkForInboundMoves() {
 
 	time_t now = getTime();
 
-	if ((!snakeFD.fd_count) && ((getTime() - timeSinceLastMove) > 500)) {
+	if ((!snakeFD.fd_count) && ((getTime() - timeSinceLastMove) > 100)) {
 		moveSnakes();
 	}
 	else if ((getTime() - timeSinceLastMove) > 1000) {

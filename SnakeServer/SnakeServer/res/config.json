@@ -13,17 +13,17 @@
       0
     ],
     "grid_size": 10,
-    "grid_width": 350,
-    "grid_height": 350,
+    "grid_width": 400,
+    "grid_height": 400,
     "grid_pos": [
-      [ 50, 500 ],
-      [ 50, 50 ]
+      [ 500, 550 ],
+      [ 500, 50 ]
     ]
   },
   "quad": {
     "max_games" :  1,
     "snakes_per_game": 4,
-    "food_per_game": 3,
+    "food_per_game": 6,
     "snake_start": [
       [ 0, 2 ],
       [ 2, 19 ],
@@ -37,10 +37,11 @@
       1
     ],
     "grid_size": 20,
-    "grid_width": 800,
-    "grid_height": 800,
+    "grid_width": 400,
+    "grid_height": 400,
     "grid_pos": [
-      [ 50, 50 ]
+      [ 500, 550 ],
+      [ 500, 50 ]
     ]
   }
 }
